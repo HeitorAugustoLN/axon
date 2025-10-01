@@ -239,11 +239,10 @@
             );
           }) cfg.homes;
 
-          modules = lib.genAttrs [ "darwin" "homeManager" "nixos" ] (name: {
-            ${name} = builtins.mapAttrs (
-              _: value: value.${if name == "homeManager" then "home" else name}
-            ) cfg.modules;
-          });
+          modules = lib.genAttrs [ "darwin" "homeManager" "nixos" ] (
+            name:
+            builtins.mapAttrs (_: value: value.${if name == "homeManager" then "home" else name}) cfg.modules
+          );
 
           nixosConfigurations = mkSystems {
             builder = inputs.nixpkgs.lib.nixosSystem;
