@@ -64,6 +64,42 @@
           home = moduleOption "Global home-manager configurations.";
           nixos = moduleOption "Global NixOS configurations.";
 
+          homes = lib.mkOption {
+            type = lib.types.attrsOf (
+              lib.types.submodule (
+                { name, ... }:
+                {
+                  options = {
+                    home = moduleOption "home-manager module to apply.";
+                    modules = modulesOption "Modules to apply to the configuration.";
+
+                    name = lib.mkOption {
+                      type = lib.types.str;
+                      default = name;
+                      example = "jdoe";
+                      description = "Name of the home configuration.";
+                    };
+
+                    system = lib.mkOption {
+                      type = lib.types.enum lib.systems.flakeExposed;
+                      example = "x86_64-linux";
+                      description = "The system architecture of the host.";
+                    };
+
+                    tags = lib.mkOption {
+                      type = lib.types.listOf lib.types.str;
+                      default = [ ];
+                      example = [ "desktop" ];
+                      description = "Tags of the home configuration.";
+                    };
+                  };
+                }
+              )
+            );
+            default = { };
+            description = "Standalone home-manager configurations.";
+          };
+
           hosts = lib.genAttrs [ "darwin" "nixos" ] (
             class:
             let
@@ -92,6 +128,13 @@
                         description = "The system architecture of the host.";
                       };
 
+                      tags = lib.mkOption {
+                        type = lib.types.listOf lib.types.str;
+                        default = [ ];
+                        example = [ "desktop" ];
+                        description = "Tags of the host.";
+                      };
+
                       users = lib.mkOption {
                         type = lib.types.attrsOf userSubmodule;
                         default = { };
@@ -112,39 +155,22 @@
             description = "Per-user global configurations.";
           };
 
-          homes = lib.mkOption {
-            type = lib.types.attrsOf (
-              lib.types.submodule (
-                { name, ... }:
-                {
-                  options = {
-                    home = moduleOption "home-manager module to apply.";
-                    modules = modulesOption "Modules to apply to the configuration.";
-
-                    name = lib.mkOption {
-                      type = lib.types.str;
-                      default = name;
-                      example = "jdoe";
-                      description = "Name of the home configuration.";
-                    };
-
-                    system = lib.mkOption {
-                      type = lib.types.enum lib.systems.flakeExposed;
-                      example = "x86_64-linux";
-                      description = "The system architecture of the host.";
-                    };
-                  };
-                }
-              )
-            );
-            default = { };
-            description = "Standalone home-manager configurations.";
-          };
-
           modules = lib.mkOption {
             type = lib.types.attrsOf modulesSubmodule;
             default = { };
             description = "Reusable modules that can be applied to hosts.";
+          };
+
+          perTag = lib.mkOption {
+            type = lib.types.attrsOf modulesSubmodule;
+            default = { };
+            example = {
+              desktop = {
+                nixos.services.xserver.enable = true;
+                home.programs.firefox.enable = true;
+              };
+            };
+            description = "Modules to apply to hosts based on their tags.";
           };
         };
 
@@ -183,7 +209,8 @@
                                 value.home
                                 value'.home
                               ]
-                              ++ map (m: m.home) value'.modules;
+                              ++ map (m: m.home) value'.modules
+                              ++ lib.flatten (map (tag: lib.optional (cfg.perTag ? ${tag}) cfg.perTag.${tag}.home) value.tags);
                             };
                         }) value.users;
                       };
@@ -196,7 +223,10 @@
                     cfg.global.${class}
                     value.${class}
                   ]
-                  ++ map (m: m.${class}) value.modules;
+                  ++ map (m: m.${class}) value.modules
+                  ++ lib.flatten (
+                    map (tag: lib.optional (cfg.perTag ? ${tag}) cfg.perTag.${tag}.${class}) value.tags
+                  );
 
                   specialArgs = { inherit inputs' self'; };
                 }
@@ -232,7 +262,9 @@
                 ++ lib.optional (userGlobal ? home) userGlobal.home
                 ++ lib.optionals (userGlobal ? modules) (map (m: m.home) userGlobal.modules)
                 ++ [ value.home ]
-                ++ map (m: m.home) value.modules;
+                ++ map (m: m.home) value.modules lib.flatten (
+                  map (tag: lib.optional (cfg.perTag ? ${tag}) cfg.perTag.${tag}.home) value.tags
+                );
 
                 inherit pkgs;
               }
