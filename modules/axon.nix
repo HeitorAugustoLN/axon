@@ -42,10 +42,20 @@
               inherit description;
             };
 
+          tagsOption =
+            description:
+            lib.mkOption {
+              type = lib.types.listOf lib.types.str;
+              default = [ ];
+              example = [ "desktop" ];
+              inherit description;
+            };
+
           userSubmodule = lib.types.submodule {
             options = {
               home = moduleOption "home-manager configuration for the user.";
               modules = modulesOption "Modules to apply to the user.";
+              tags = tagsOption "Tags of the user configuration.";
             };
           };
         in
@@ -78,12 +88,7 @@
                       description = "The system architecture of the host.";
                     };
 
-                    tags = lib.mkOption {
-                      type = lib.types.listOf lib.types.str;
-                      default = [ ];
-                      example = [ "desktop" ];
-                      description = "Tags of the home configuration.";
-                    };
+                    tags = tagsOption "Tags of the home configuration.";
                   };
                 }
               )
@@ -122,12 +127,7 @@
                         description = "The system architecture of the host.";
                       };
 
-                      tags = lib.mkOption {
-                        type = lib.types.listOf lib.types.str;
-                        default = [ ];
-                        example = [ "desktop" ];
-                        description = "Tags of the host.";
-                      };
+                      tags = tagsOption "Tags of the host.";
 
                       users = lib.mkOption {
                         type = lib.types.attrsOf userSubmodule;
@@ -193,6 +193,7 @@
                           userName: userConfig:
                           let
                             userGlobal = lib.optionalAttrs (cfg.users ? ${userName}) cfg.users.${userName};
+                            userTags = lib.unique (userConfig.tags ++ (userGlobal.tags or [ ]));
                           in
                           {
                             imports = [
@@ -205,9 +206,7 @@
                               userConfig.home
                             ]
                             ++ map (m: m.home) userConfig.modules
-                            ++ lib.flatten (
-                              map (tag: lib.optional (cfg.perTag ? ${tag}) cfg.perTag.${tag}.home) hostConfig.tags
-                            );
+                            ++ lib.flatten (map (tag: lib.optional (cfg.perTag ? ${tag}) cfg.perTag.${tag}.home) userTags);
                           }
                         ) hostConfig.users;
                       };
@@ -249,6 +248,7 @@
               let
                 userName = builtins.head (lib.splitString "@" homeConfig.name);
                 userGlobal = lib.optionalAttrs (cfg.users ? ${userName}) cfg.users.${userName};
+                userTags = lib.unique (homeConfig.tags ++ (userGlobal.tags or [ ]));
               in
               inputs.home-manager.lib.homeManagerConfiguration {
                 extraSpecialArgs = { inherit homeConfig inputs' self'; };
@@ -259,9 +259,8 @@
                 ++ lib.optional (userGlobal ? home) userGlobal.home
                 ++ lib.optionals (userGlobal ? modules) (map (m: m.home) userGlobal.modules)
                 ++ [ homeConfig.home ]
-                ++ map (m: m.home) homeConfig.modules lib.flatten (
-                  map (tag: lib.optional (cfg.perTag ? ${tag}) cfg.perTag.${tag}.home) homeConfig.tags
-                );
+                ++ map (m: m.home) homeConfig.modules
+                ++ lib.flatten (map (tag: lib.optional (cfg.perTag ? ${tag}) cfg.perTag.${tag}.home) userTags);
 
                 inherit pkgs;
               }
