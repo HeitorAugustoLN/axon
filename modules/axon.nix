@@ -179,12 +179,15 @@
 
               value = withSystem hostConfig.system (
                 { inputs', self', ... }:
+                let
+                  specialArgs = { inherit hostConfig inputs' self'; };
+                in
                 builder {
                   modules = [
                     inputs.home-manager."${class}Modules".home-manager
                     {
                       home-manager = {
-                        extraSpecialArgs = { inherit hostConfig inputs' self'; };
+                        extraSpecialArgs = specialArgs;
 
                         users = builtins.mapAttrs (
                           userName: userConfig:
@@ -222,7 +225,7 @@
                     map (tag: lib.optional (cfg.perTag ? ${tag}) cfg.perTag.${tag}.${class}) hostConfig.tags
                   );
 
-                  specialArgs = { inherit hostConfig inputs' self'; };
+                  inherit specialArgs;
                 }
               );
             }) cfg.hosts.${class};
