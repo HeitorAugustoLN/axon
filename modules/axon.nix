@@ -59,6 +59,8 @@
               lib.types.submodule (
                 { name, ... }:
                 {
+                  freeformType = lib.types.attrsOf lib.types.anything;
+
                   options = {
                     home = moduleOption "home-manager module to apply.";
                     modules = modulesOption "Modules to apply to the configuration.";
@@ -100,6 +102,8 @@
                 lib.types.submodule (
                   { name, ... }:
                   {
+                    freeformType = lib.types.attrsOf lib.types.anything;
+
                     options = {
                       ${class} = moduleOption "${className} configuration for the host.";
                       home = moduleOption "home-manager configuration for all users in the host.";
@@ -180,7 +184,7 @@
                     inputs.home-manager."${class}Modules".home-manager
                     {
                       home-manager = {
-                        extraSpecialArgs = { inherit inputs' self'; };
+                        extraSpecialArgs = { inherit hostConfig inputs' self'; };
 
                         users = builtins.mapAttrs (
                           userName: userConfig:
@@ -218,7 +222,7 @@
                     map (tag: lib.optional (cfg.perTag ? ${tag}) cfg.perTag.${tag}.${class}) hostConfig.tags
                   );
 
-                  specialArgs = { inherit inputs' self'; };
+                  specialArgs = { inherit hostConfig inputs' self'; };
                 }
               );
             }) cfg.hosts.${class};
@@ -229,10 +233,10 @@
             class = "darwin";
           };
 
-          homeConfigurations = lib.mapAttrs' (_: value: {
-            inherit (value) name;
+          homeConfigurations = lib.mapAttrs' (_: homeConfig: {
+            inherit (homeConfig) name;
 
-            value = withSystem value.system (
+            value = withSystem homeConfig.system (
               {
                 inputs',
                 pkgs,
@@ -240,20 +244,20 @@
                 ...
               }:
               let
-                userName = builtins.head (lib.splitString "@" value.name);
+                userName = builtins.head (lib.splitString "@" homeConfig.name);
                 userGlobal = lib.optionalAttrs (cfg.users ? userName) cfg.users.${userName};
               in
               inputs.home-manager.lib.homeManagerConfiguration {
-                extraSpecialArgs = { inherit inputs' self'; };
+                extraSpecialArgs = { inherit homeConfig inputs' self'; };
 
                 modules = [
                   cfg.global.home
                 ]
                 ++ lib.optional (userGlobal ? home) userGlobal.home
                 ++ lib.optionals (userGlobal ? modules) (map (m: m.home) userGlobal.modules)
-                ++ [ value.home ]
-                ++ map (m: m.home) value.modules lib.flatten (
-                  map (tag: lib.optional (cfg.perTag ? ${tag}) cfg.perTag.${tag}.home) value.tags
+                ++ [ homeConfig.home ]
+                ++ map (m: m.home) homeConfig.modules lib.flatten (
+                  map (tag: lib.optional (cfg.perTag ? ${tag}) cfg.perTag.${tag}.home) homeConfig.tags
                 );
 
                 inherit pkgs;
