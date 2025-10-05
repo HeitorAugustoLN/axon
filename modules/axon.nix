@@ -245,7 +245,7 @@
               }:
               let
                 userName = builtins.head (lib.splitString "@" homeConfig.name);
-                userGlobal = lib.optionalAttrs (cfg.users ? userName) cfg.users.${userName};
+                userGlobal = lib.optionalAttrs (cfg.users ? ${userName}) cfg.users.${userName};
               in
               inputs.home-manager.lib.homeManagerConfiguration {
                 extraSpecialArgs = { inherit homeConfig inputs' self'; };
