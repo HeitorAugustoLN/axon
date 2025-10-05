@@ -193,13 +193,11 @@
                           {
                             imports = [
                               cfg.home
-                            ]
-                            ++ lib.optional (userGlobal ? home) userGlobal.home
-                            ++ lib.optionals (userGlobal ? modules) (map (m: m.home) userGlobal.modules)
-                            ++ [
                               hostConfig.home
                               userConfig.home
                             ]
+                            ++ lib.optional (userGlobal ? home) userGlobal.home
+                            ++ lib.optionals (userGlobal ? modules) (map (m: m.home) userGlobal.modules)
                             ++ map (m: m.home) userConfig.modules
                             ++ lib.flatten (map (tag: lib.optional (cfg.perTag ? ${tag}) cfg.perTag.${tag}.home) userTags);
                           }
@@ -250,10 +248,10 @@
 
                 modules = [
                   cfg.home
+                  homeConfig.home
                 ]
                 ++ lib.optional (userGlobal ? home) userGlobal.home
                 ++ lib.optionals (userGlobal ? modules) (map (m: m.home) userGlobal.modules)
-                ++ [ homeConfig.home ]
                 ++ map (m: m.home) homeConfig.modules
                 ++ lib.flatten (map (tag: lib.optional (cfg.perTag ? ${tag}) cfg.perTag.${tag}.home) userTags);
 
