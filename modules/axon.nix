@@ -196,7 +196,7 @@
                           in
                           {
                             imports = [
-                              cfg.global.home
+                              cfg.home
                             ]
                             ++ lib.optional (userGlobal ? home) userGlobal.home
                             ++ lib.optionals (userGlobal ? modules) (map (m: m.home) userGlobal.modules)
@@ -215,7 +215,7 @@
                     }
                   ]
                   ++ [
-                    cfg.global.${class}
+                    cfg.${class}
                     hostConfig.${class}
                   ]
                   ++ map (m: m.${class}) hostConfig.modules
@@ -253,7 +253,7 @@
                 extraSpecialArgs = { inherit homeConfig inputs' self'; };
 
                 modules = [
-                  cfg.global.home
+                  cfg.home
                 ]
                 ++ lib.optional (userGlobal ? home) userGlobal.home
                 ++ lib.optionals (userGlobal ? modules) (map (m: m.home) userGlobal.modules)
