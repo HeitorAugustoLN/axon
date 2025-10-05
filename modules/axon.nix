@@ -51,13 +51,21 @@
               inherit description;
             };
 
-          userSubmodule = lib.types.submodule {
-            options = {
-              home = moduleOption "home-manager configuration for the user.";
-              modules = modulesOption "Modules to apply to the user.";
-              tags = tagsOption "Tags of the user configuration.";
+          usersOption =
+            description:
+            lib.mkOption {
+              type = lib.types.attrsOf (
+                lib.types.submodule {
+                  options = {
+                    home = moduleOption "home-manager configuration for the user.";
+                    modules = modulesOption "Modules to apply to the user.";
+                    tags = tagsOption "Tags of the user configuration.";
+                  };
+                }
+              );
+              default = { };
+              inherit description;
             };
-          };
         in
         {
           darwin = moduleOption "Global nix-darwin configurations.";
@@ -128,12 +136,7 @@
                       };
 
                       tags = tagsOption "Tags of the host.";
-
-                      users = lib.mkOption {
-                        type = lib.types.attrsOf userSubmodule;
-                        default = { };
-                        description = "Per-user configurations for the host.";
-                      };
+                      users = usersOption "Per-user configurations for the host.";
                     };
                   }
                 )
@@ -143,11 +146,7 @@
             }
           );
 
-          users = lib.mkOption {
-            type = lib.types.attrsOf userSubmodule;
-            default = { };
-            description = "Per-user global configurations.";
-          };
+          users = usersOption "Per-user global configurations.";
 
           modules = lib.mkOption {
             type = lib.types.attrsOf modulesSubmodule;
