@@ -42,6 +42,12 @@
               inherit description;
             };
 
+          systemOption = lib.mkOption {
+            type = lib.types.enum lib.systems.flakeExposed;
+            example = "x86_64-linux";
+            description = "The system architecture of the host.";
+          };
+
           tagsOption =
             description:
             lib.mkOption {
@@ -90,12 +96,7 @@
                       description = "Name of the home configuration.";
                     };
 
-                    system = lib.mkOption {
-                      type = lib.types.enum lib.systems.flakeExposed;
-                      example = "x86_64-linux";
-                      description = "The system architecture of the host.";
-                    };
-
+                    system = systemOption;
                     tags = tagsOption "Tags of the home configuration.";
                   };
                 }
@@ -129,12 +130,7 @@
                         description = "Name of the host.";
                       };
 
-                      system = lib.mkOption {
-                        type = lib.types.enum lib.systems.flakeExposed;
-                        example = "x86_64-linux";
-                        description = "The system architecture of the host.";
-                      };
-
+                      system = systemOption;
                       tags = tagsOption "Tags of the host.";
                       users = usersOption "Per-user configurations for the host.";
                     };
