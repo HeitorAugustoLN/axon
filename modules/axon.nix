@@ -42,22 +42,12 @@
               inherit description;
             };
 
-          userSubmodule = lib.types.submodule (
-            { name, ... }:
-            {
-              options = {
-                home = moduleOption "home-manager configuration for the user.";
-                modules = modulesOption "Modules to apply to the user.";
-
-                name = lib.mkOption {
-                  type = lib.types.str;
-                  default = name;
-                  example = "user";
-                  description = "Name of the user.";
-                };
-              };
-            }
-          );
+          userSubmodule = lib.types.submodule {
+            options = {
+              home = moduleOption "home-manager configuration for the user.";
+              modules = modulesOption "Modules to apply to the user.";
+            };
+          };
         in
         {
           darwin = moduleOption "Global nix-darwin configurations.";
@@ -180,10 +170,10 @@
 
           mkSystems =
             { builder, class }:
-            lib.mapAttrs' (_: value: {
-              inherit (value) name;
+            lib.mapAttrs' (_: hostConfig: {
+              inherit (hostConfig) name;
 
-              value = withSystem value.system (
+              value = withSystem hostConfig.system (
                 { inputs', self', ... }:
                 builder {
                   modules = [
@@ -192,40 +182,40 @@
                       home-manager = {
                         extraSpecialArgs = { inherit inputs' self'; };
 
-                        users = lib.mapAttrs' (_: value': {
-                          inherit (value') name;
-
-                          value =
-                            let
-                              userGlobal = lib.optionalAttrs (cfg.users ? value'.name) cfg.users.${value'.name};
-                            in
-                            {
-                              imports = [
-                                cfg.global.home
-                              ]
-                              ++ lib.optional (userGlobal ? home) userGlobal.home
-                              ++ lib.optionals (userGlobal ? modules) (map (m: m.home) userGlobal.modules)
-                              ++ [
-                                value.home
-                                value'.home
-                              ]
-                              ++ map (m: m.home) value'.modules
-                              ++ lib.flatten (map (tag: lib.optional (cfg.perTag ? ${tag}) cfg.perTag.${tag}.home) value.tags);
-                            };
-                        }) value.users;
+                        users = builtins.mapAttrs (
+                          userName: userConfig:
+                          let
+                            userGlobal = lib.optionalAttrs (cfg.users ? ${userName}) cfg.users.${userName};
+                          in
+                          {
+                            imports = [
+                              cfg.global.home
+                            ]
+                            ++ lib.optional (userGlobal ? home) userGlobal.home
+                            ++ lib.optionals (userGlobal ? modules) (map (m: m.home) userGlobal.modules)
+                            ++ [
+                              hostConfig.home
+                              userConfig.home
+                            ]
+                            ++ map (m: m.home) userConfig.modules
+                            ++ lib.flatten (
+                              map (tag: lib.optional (cfg.perTag ? ${tag}) cfg.perTag.${tag}.home) hostConfig.tags
+                            );
+                          }
+                        ) hostConfig.users;
                       };
 
-                      networking.hostName = lib.mkDefault value.name;
-                      nixpkgs.hostPlatform = lib.mkDefault value.system;
+                      networking.hostName = lib.mkDefault hostConfig.name;
+                      nixpkgs.hostPlatform = lib.mkDefault hostConfig.system;
                     }
                   ]
                   ++ [
                     cfg.global.${class}
-                    value.${class}
+                    hostConfig.${class}
                   ]
-                  ++ map (m: m.${class}) value.modules
+                  ++ map (m: m.${class}) hostConfig.modules
                   ++ lib.flatten (
-                    map (tag: lib.optional (cfg.perTag ? ${tag}) cfg.perTag.${tag}.${class}) value.tags
+                    map (tag: lib.optional (cfg.perTag ? ${tag}) cfg.perTag.${tag}.${class}) hostConfig.tags
                   );
 
                   specialArgs = { inherit inputs' self'; };
